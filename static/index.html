@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>勤怠状況</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: transparent;
+    font-family: 'Segoe UI', 'Hiragino Sans', 'Meiryo', sans-serif;
+    color: #fff;
+    padding: 12px;
+  }
+
+  #container {
+    background: rgba(20, 20, 30, 0.82);
+    border-radius: 12px;
+    padding: 14px 18px;
+    min-width: 220px;
+    max-width: 320px;
+    backdrop-filter: blur(6px);
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+
+  h1 {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    color: rgba(255,255,255,0.5);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  #persons {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .person {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 8px;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.04);
+    transition: background 0.2s;
+  }
+
+  .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .status-not_in  .dot { background: #555; }
+  .status-working .dot { background: #4ade80; box-shadow: 0 0 6px #4ade80aa; }
+  .status-left    .dot { background: #fbbf24; }
+
+  .name {
+    font-size: 15px;
+    font-weight: 500;
+    flex: 1;
+  }
+
+  .status-not_in  .name { color: rgba(255,255,255,0.35); }
+  .status-working .name { color: #fff; }
+  .status-left    .name { color: rgba(255,255,255,0.55); text-decoration: line-through; }
+
+  .badge {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 20px;
+  }
+
+  .status-not_in  .badge { display: none; }
+  .status-working .badge { background: rgba(74,222,128,0.2); color: #4ade80; font-size: 13px; }
+  .status-left    .badge { background: rgba(251,191,36,0.15); color: #fbbf24; }
+
+  #empty {
+    font-size: 13px;
+    color: rgba(255,255,255,0.3);
+    text-align: center;
+    padding: 8px 0;
+  }
+
+  #conn-indicator {
+    font-size: 10px;
+    color: rgba(255,255,255,0.2);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  #conn-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #555;
+  }
+
+  #conn-dot.connected { background: #4ade80; }
+  #conn-dot.disconnected { background: #f87171; }
+</style>
+</head>
+<body>
+<div id="container">
+  <h1>
+    <span>勤怠状況</span>
+    <div id="conn-indicator">
+      <div id="conn-dot"></div>
+      <span id="conn-text">接続中...</span>
+    </div>
+  </h1>
+  <div id="persons"><div id="empty">読み込み中...</div></div>
+</div>
+
+<script>
+const STATUS_LABEL = {
+  not_in:  '',
+  working: '勤務中',
+  left:    '退勤',
+};
+
+function render(persons) {
+  const container = document.getElementById('persons');
+  if (persons.length === 0) {
+    container.innerHTML = '<div id="empty">本日の記録なし</div>';
+    return;
+  }
+  container.innerHTML = persons.map(p => `
+    <div class="person status-${p.status}">
+      <div class="dot"></div>
+      <div class="name">${escHtml(p.display_name)}</div>
+      <div class="badge">${STATUS_LABEL[p.status] || ''}</div>
+    </div>
+  `).join('');
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function setConn(state) {
+  const dot = document.getElementById('conn-dot');
+  const text = document.getElementById('conn-text');
+  dot.className = state;
+  text.textContent = state === 'connected' ? 'ライブ' : state === 'disconnected' ? '切断' : '接続中...';
+}
+
+let ws;
+function connect() {
+  const url = `ws://${location.host}/ws`;
+  ws = new WebSocket(url);
+
+  ws.onopen = () => setConn('connected');
+
+  ws.onmessage = (e) => {
+    const msg = JSON.parse(e.data);
+    if (msg.type === 'status_update') render(msg.persons);
+  };
+
+  ws.onclose = () => {
+    setConn('disconnected');
+    setTimeout(connect, 3000); // 3秒後に再接続
+  };
+
+  ws.onerror = () => ws.close();
+}
+
+connect();
+</script>
+</body>
+</html>
