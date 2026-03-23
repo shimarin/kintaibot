@@ -108,23 +108,28 @@ class SlackHandler:
 
         logger.info("ヒストリ読み込み完了")
 
-    async def _handle_message(self, message, say):
+    async def _handle_message(self, message):
         """リアルタイムメッセージイベントのハンドラ"""
-        user_id = message.get("user")
-        if not user_id:
-            return
-        text = message.get("text", "")
-        ts = float(message.get("ts", 0))
+        try:
+            user_id = message.get("user")
+            if not user_id:
+                return
+            text = message.get("text", "")
+            ts = float(message.get("ts", 0))
 
-        # 当日のメッセージのみ処理
-        if ts < _today_start_ts():
-            return
+            logger.debug(f"メッセージ受信: user={user_id} ts={ts} text={text!r}")
 
-        display_name = await self._resolve_user(user_id)
-        changed = self._status_manager.process_message(user_id, display_name, text, ts)
-        if changed:
-            logger.info(f"ステータス変化: {display_name}")
-            await self._on_status_change()
+            # 当日のメッセージのみ処理
+            if ts < _today_start_ts():
+                return
+
+            display_name = await self._resolve_user(user_id)
+            changed = self._status_manager.process_message(user_id, display_name, text, ts)
+            if changed:
+                logger.info(f"ステータス変化: {display_name} → {self._status_manager._persons[user_id].status.value}")
+                await self._on_status_change()
+        except Exception:
+            logger.exception("メッセージ処理中にエラーが発生しました")
 
     async def start(self):
         """Socket Mode で Slack に接続して待機"""
