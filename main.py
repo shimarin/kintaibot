@@ -28,13 +28,10 @@ STATIC_DIR = Path(__file__).parent / "static"
 
 # ── キーリング ──────────────────────────────────────────────────────────────
 
-def get_keyring_value(key_name: str) -> str:
+def get_keyring_value(key_name: str) -> str | None:
     serial = keyutils.request_key(key_name.encode(), keyutils.KEY_SPEC_USER_KEYRING)
     if serial is None:
-        print(f"エラー: キー '{key_name}' がキーリングに見つかりません。", file=sys.stderr)
-        print("以下のコマンドで登録してください:", file=sys.stderr)
-        print(f"  read -rsp '{key_name}: ' k && echo -n \"$k\" | keyctl padd user {key_name} @u", file=sys.stderr)
-        sys.exit(1)
+        return None
     return keyutils.read_key(serial).decode()
 
 
@@ -94,8 +91,17 @@ def build_web_app(status_manager: StatusManager) -> web.Application:
 # ── エントリポイント ────────────────────────────────────────────────────────
 
 async def async_main(port: int):
-    bot_token = get_keyring_value("kintaibot_bot_token")
-    app_token = get_keyring_value("kintaibot_app_token")
+    key_names = ["kintaibot_bot_token", "kintaibot_app_token"]
+    keys = {k: get_keyring_value(k) for k in key_names}
+    missing = [k for k, v in keys.items() if v is None]
+    if missing:
+        print("エラー: 以下のキーがキーリングに見つかりません。", file=sys.stderr)
+        print("以下のコマンドで登録してください:", file=sys.stderr)
+        for k in missing:
+            print(f"  read -rsp '{k}: ' v && echo -n \"$v\" | keyctl padd user {k} @u", file=sys.stderr)
+        sys.exit(1)
+    bot_token = keys["kintaibot_bot_token"]
+    app_token = keys["kintaibot_app_token"]
 
     status_manager = StatusManager()
 
