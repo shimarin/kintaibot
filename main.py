@@ -122,19 +122,15 @@ async def async_main(port: int):
     web_app = build_web_app(status_manager)
     runner = web.AppRunner(web_app)
     await runner.setup()
-    site = web.TCPSite(runner, "0.0.0.0", port)
+    site = web.TCPSite(runner, "127.0.0.1", port)
     await site.start()
-    logger.info(f"Web サーバ起動: http://0.0.0.0:{port}")
-
-    # Slack Socket Mode 接続
-    await slack.start()
-    logger.info("Slack Socket Mode 接続完了")
+    logger.info(f"Web サーバ起動: http://127.0.0.1:{port}")
 
     # 日付変更タスク
     asyncio.create_task(midnight_reset_task(status_manager))
 
-    # 永続待機
-    await asyncio.Event().wait()
+    # Slack Socket Mode 接続（この await は戻らない）
+    await slack.start()
 
 
 if __name__ == "__main__":
