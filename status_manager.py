@@ -32,10 +32,7 @@ class StatusManager:
 
     def reset(self):
         """0:00 になったときにステータスをリセット"""
-        for p in self._persons.values():
-            p.status = Status.NOT_IN
-            p.last_in_ts = None
-            p.last_out_ts = None
+        self._persons.clear()
 
     def process_message(
         self,

@@ -117,10 +117,11 @@ class SlackHandler:
             text = message.get("text", "")
             ts = float(message.get("ts", 0))
 
-            logger.debug(f"メッセージ受信: user={user_id} ts={ts} text={text!r}")
+            logger.info(f"メッセージ受信: user={user_id} ts={ts} text={text!r}")
 
             # 当日のメッセージのみ処理
             if ts < _today_start_ts():
+                logger.info(f"  → 昨日以前のメッセージのためスキップ")
                 return
 
             display_name = await self._resolve_user(user_id)
@@ -128,6 +129,8 @@ class SlackHandler:
             if changed:
                 logger.info(f"ステータス変化: {display_name} → {self._status_manager._persons[user_id].status.value}")
                 await self._on_status_change()
+            else:
+                logger.info(f"  → ステータス変化なし ({display_name})")
         except Exception:
             logger.exception("メッセージ処理中にエラーが発生しました")
 
