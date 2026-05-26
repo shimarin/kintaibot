@@ -1,4 +1,5 @@
 name = "kintaibot"
+icon = "icon.svg"
 comment = "Slackの#kintaiチャンネルを監視し出勤状況を表示する"
 exec = ["python", "-u", "main.py"]
 
