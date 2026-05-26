@@ -1,0 +1,14 @@
+name = "kintaibot"
+comment = "Slackの#kintaiチャンネルを監視し出勤状況を表示する"
+exec = ["python", "-u", "main.py"]
+
+[[keyring]]
+key  = "kintaibot_bot_token"
+desc = "Slack Bot Token (xoxb-...) を入力してください。"
+
+[[keyring]]
+key  = "kintaibot_app_token"
+desc = "Slack App-Level Token (xapp-...) を入力してください。"
+
+[info]
+markup = '<a href="http://localhost:52963/">http://localhost:52963/</a>'
